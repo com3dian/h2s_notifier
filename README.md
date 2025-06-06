@@ -77,17 +77,6 @@ python view_db.py
 python clear_db.py
 ```
 
-## 定时任务
-
-如果选择不启用内置的持续监控功能 (`"monitoring_settings": { "enabled": false }`)，你仍然可以使用 crontab 来实现定时执行。
-
-添加 crontab 定时任务:
-```bash
-crontab -e
-# 每5分钟执行一次
-*/5 * * * * cd /path/to/Holland2StayNotifier/h2snotifier/ && python main.py
-```
-
 ## 致谢
 - 原项目作者: [JafarAkhondali](https://github.com/JafarAkhondali)
 - 原项目贡献者: [MHMALEK](https://github.com/MHMALEK)

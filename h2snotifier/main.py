@@ -7,6 +7,7 @@ import json
 import time
 from datetime import datetime, timezone
 import pytz
+import random # 导入 random 模块
 
 # 配置日志记录，同时输出到控制台和文件
 logging.basicConfig(
@@ -85,7 +86,7 @@ def process_notifications(config, pushplus_token_to_use):
                         content = house_to_msg(h)
                         logging.info(f"推送新房源通知: {h.get('url_key', 'N/A')} ({booking_status}), 价格: {price} 欧元")
                         if pushplus_token_to_use:
-                            res = send_pushplus_msg(title, content, pushplus_token_to_use)
+                            res = send_pushplus_msg(pushplus_token_to_use, title, content) # 修正参数顺序
                             logging.info(f"PushPlus 推送结果: {res}")
                         else:
                             logging.warning("由于未设置有效的 PUSHPLUS_TOKEN，跳过推送")
@@ -127,23 +128,43 @@ def main():
             start_hour = monitoring_settings.get("start_hour", 9)
             end_hour = monitoring_settings.get("end_hour", 17)
             interval_minutes = monitoring_settings.get("interval_minutes", 5)
-            interval_seconds = interval_minutes * 60
+            base_interval_seconds = interval_minutes * 60
+            interval_jitter_percent = monitoring_settings.get("interval_jitter_percent", 0.0)
+            off_hours_interval_minutes = monitoring_settings.get("off_hours_interval_minutes", 30) # 读取非工作时间间隔
+            off_hours_interval_seconds = off_hours_interval_minutes * 60
 
-            logging.info(f"监控参数：时区={monitor_tz}, 工作日={workdays}, 时间={start_hour:02d}:00-{end_hour:02d}:00, 间隔={interval_minutes}分钟")
+            logging.info(f"监控参数：时区={monitor_tz}, 工作日={workdays}, 时间={start_hour:02d}:00-{end_hour:02d}:00, 工作时间间隔={interval_minutes}分钟, 非工作时间间隔={off_hours_interval_minutes}分钟, 抖动={interval_jitter_percent*100}%")
 
             while True:
                 now_local = datetime.now(monitor_tz)
                 current_weekday = now_local.weekday()
                 current_hour = now_local.hour
 
-                if current_weekday in workdays and start_hour <= current_hour < end_hour:
-                    logging.info(f"当前时间 {now_local.strftime('%Y-%m-%d %H:%M:%S %Z%z')} 在监控时段内，开始检查...")
-                    process_notifications(config, pushplus_token_to_use) # 传递 PUSHPLUS_TOKEN
-                else:
-                    logging.info(f"当前时间 {now_local.strftime('%Y-%m-%d %H:%M:%S %Z%z')} 不在监控时段内 (工作日: {workdays}, 时间: {start_hour:02d}:00-{end_hour:02d}:00)。")
+                is_work_time = current_weekday in workdays and start_hour <= current_hour < end_hour
+                current_base_interval_seconds = 0
+                current_interval_description = ""
 
-                logging.info(f"等待 {interval_minutes} 分钟后再次检查...")
-                time.sleep(interval_seconds)
+                if is_work_time:
+                    # logging.info(f"当前时间 {now_local.strftime('%Y-%m-%d %H:%M:%S %Z%z')} 在监控时段内。使用工作时间间隔。") # 日志移到下方统一处理
+                    current_base_interval_seconds = base_interval_seconds
+                    current_interval_description = f"{interval_minutes} 分钟 (工作时间)"
+                else:
+                    # logging.info(f"当前时间 {now_local.strftime('%Y-%m-%d %H:%M:%S %Z%z')} 不在监控时段内。使用非工作时间间隔。") # 日志移到下方统一处理
+                    current_base_interval_seconds = off_hours_interval_seconds
+                    current_interval_description = f"{off_hours_interval_minutes} 分钟 (非工作时间)"
+
+                logging.info(f"当前时间 {now_local.strftime('%Y-%m-%d %H:%M:%S %Z%z')} - {current_interval_description}. 开始执行检查流程...")
+                process_notifications(config, pushplus_token_to_use)
+
+                # 计算抖动和休眠时间
+                jitter_range = current_base_interval_seconds * interval_jitter_percent
+                random_jitter = random.uniform(-jitter_range, jitter_range)
+                current_sleep_interval = current_base_interval_seconds + random_jitter
+                current_sleep_interval = max(1, current_sleep_interval)
+
+                # current_interval_minutes_display = current_base_interval_seconds / 60 # 已在 current_interval_description 中体现
+                logging.info(f"等待 {current_sleep_interval:.2f} 秒 (下次检查基于 {current_interval_description}, +/- {interval_jitter_percent*100}% 抖动) 后再次检查...")
+                time.sleep(current_sleep_interval)
         else:
             logging.info("单次运行模式")
             process_notifications(config, pushplus_token_to_use) # 传递 PUSHPLUS_TOKEN
