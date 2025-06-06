@@ -9,6 +9,7 @@
 - **数据库连接优化**: 优化数据库连接管理，避免重复创建连接
 - **日志增强**: 同时将日志输出到文件和控制台，方便监控
 - **数据管理**: 提供数据库查看和清理工具
+- **统一配置**: 将所有配置项集中到 `config.json` 文件
 
 ## 安装与配置:
 ```bash
@@ -20,6 +21,9 @@ python main.py
 
 ```json
 {
+  "SERVERCHAN_SCKEY": "你的SCKEY", // Server酱的SCKEY
+  "only_direct_booking": true,     // 是否只监控可直接预订的房源
+  "max_price": 1000,               // 房源价格上限(欧元)
   "notifications": {
     "groups": [
       {
@@ -28,14 +32,11 @@ python main.py
       }
     ]
   },
-  "only_direct_booking": true,  // 是否只监控可直接预订的房源
-  "max_price": 1000            // 房源价格上限(欧元)
+  "legacy_settings": {             // 旧版配置，可忽略或删除
+    "TELEGRAM_API_KEY": "",
+    "DEBUGGING_CHAT_ID": ""
+  }
 }
-```
-
-在 `.env` 文件中设置 Server酱 的 SCKEY：
-```
-SERVERCHAN_SCKEY=你的SCKEY
 ```
 
 ## 城市ID对照表

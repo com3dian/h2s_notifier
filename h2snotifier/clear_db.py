@@ -13,6 +13,7 @@ logging.basicConfig(
     ]
 )
 
+
 def delete_database_file():
     """完全删除数据库文件"""
     try:
@@ -29,6 +30,7 @@ def delete_database_file():
         logging.error(f"删除数据库文件时出错: {e}")
         print(f"✗ 删除数据库文件失败: {e}")
         return False
+
 
 def clear_table_data():
     """清空数据库表中的数据，但保留表结构"""
@@ -57,6 +59,7 @@ def clear_table_data():
         logging.error(f"操作数据库时出错: {e}")
         print(f"✗ 操作数据库失败: {e}")
         return False
+
 
 if __name__ == "__main__":
     print("数据库清理工具")

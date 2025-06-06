@@ -1,6 +1,5 @@
 import logging
 import sys
-from dotenv import dotenv_values
 from db import create_table, sync_houses, close_connection
 from scrape import scrape, house_to_msg, CITY_IDS
 from serverchan import send_wechat_msg
@@ -16,10 +15,7 @@ logging.basicConfig(
     ]
 )
 
-env = dotenv_values(".env")
-SERVERCHAN_SCKEY = env.get("SERVERCHAN_SCKEY")
-if not SERVERCHAN_SCKEY or SERVERCHAN_SCKEY == "SCT123456789abcdefg":
-    logging.warning("SERVERCHAN_SCKEY未设置或使用了默认值，微信推送功能将不可用")
+SERVERCHAN_SCKEY = None
 
 
 def read_config(config_path="config.json"):
@@ -50,12 +46,18 @@ def main():
             logging.error("无法读取配置，程序终止")
             return
 
+        global SERVERCHAN_SCKEY
+        SERVERCHAN_SCKEY = config.get("SERVERCHAN_SCKEY")
+        if not SERVERCHAN_SCKEY or SERVERCHAN_SCKEY == "SCT123456789abcdefg" or SERVERCHAN_SCKEY == "SCT281078TIUMc2QgVMYTeT08ReBJW31z1":  # 更新条件以包含示例值
+            logging.warning("SERVERCHAN_SCKEY未设置或使用了示例/默认值，微信推送功能将不可用")
+            SERVERCHAN_SCKEY = None  # 确保在这种情况下 SERVERCHAN_SCKEY 为 None
+
         # 从配置文件中读取是否只抓取可直接预订的房源
-        only_direct_booking = config.get("only_direct_booking", True)
+        only_direct_booking = config.get("only_direct_booking", True)  # 保留默认值以防万一
         logging.info(f"配置设置：只抓取可直接预订的房源: {only_direct_booking}")
 
-        # 获取价格上限，默认为1000欧元
-        max_price = config.get("max_price", 1000)
+        # 获取价格上限
+        max_price = config.get("max_price", 1000)  # 保留默认值以防万一
         logging.info(f"配置设置：房源价格上限: {max_price} 欧元")
 
         total_new_houses = 0
@@ -94,7 +96,7 @@ def main():
                             title = f"新房源({booking_status}): {h['url_key']}"
                             content = house_to_msg(h)
                             logging.info(f"推送新房源通知: {h['url_key']} ({booking_status}), 价格: {price} 欧元")
-                            if SERVERCHAN_SCKEY and SERVERCHAN_SCKEY != "SCT123456789abcdefg":
+                            if SERVERCHAN_SCKEY:  # 更新检查条件
                                 res = send_wechat_msg(title, content, SERVERCHAN_SCKEY)
                                 logging.info(f"微信推送结果: {res}")
                             else:
@@ -103,15 +105,12 @@ def main():
                             logging.error(f"微信推送失败: {h['url_key']}")
                             logging.error(str(error))
 
-        logging.info(f"程序执行完毕，共发现 {total_new_houses} 个新房源，其中 {filtered_by_price} 个因价格超过 {max_price} 欧元而未推送")
     except Exception as e:
         logging.error(f"程序执行过程中发生错误: {str(e)}", exc_info=True)
     finally:
-        # 确保在程序结束时关闭数据库连接
         logging.info("关闭数据库连接")
         close_connection()
 
 
 if __name__ == "__main__":
     main()
-
