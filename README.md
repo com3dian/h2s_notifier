@@ -41,7 +41,9 @@ python main.py
     "workdays": [0, 1, 2, 3, 4],   // 工作日列表，0=周一, 6=周日
     "start_hour": 9,               // 监控开始小时 (24小时制)
     "end_hour": 17,                // 监控结束小时 (24小时制，不包含此小时)
-    "interval_minutes": 5          // 监控检查间隔 (分钟)
+    "interval_minutes": 5,         // 工作时间内的监控检查间隔 (分钟)
+    "off_hours_interval_minutes": 30, // 非工作时间的监控检查间隔 (分钟)
+    "interval_jitter_percent": 0.1 // 监控间隔的抖动百分比 (例如 0.1 表示 +/-10%)
   },
   "legacy_settings": {             // 旧版配置，可忽略或删除
     "TELEGRAM_API_KEY": "",
@@ -75,6 +77,21 @@ python view_db.py
 清理数据库:
 ```bash
 python clear_db.py
+```
+
+## 定时任务
+
+内置的持续监控功能 (`"monitoring_settings": { "enabled": true }`) 启动后，程序会根据 `timezone`, `workdays`, `start_hour`, `end_hour`, `interval_minutes`, `off_hours_interval_minutes`, 和 `interval_jitter_percent` 的设置自动调整监控频率并持续运行。在工作时间和非工作时间，程序都会执行完整的房源检查和推送逻辑。
+
+如果选择不启用内置的持续监控功能 (`"monitoring_settings": { "enabled": false }`)，你仍然可以使用 crontab 来实现定时执行。
+
+添加 crontab 定时任务:
+```
+# 每天 9 点到 17 点之间，每隔 5 分钟执行一次
+*/5 9-17 * * 1-5 python /path/to/your/main.py
+
+# 每天 17 点到 次日 9 点之间，每隔 30 分钟执行一次
+*/30 0-8,17-23 * * 1-5 python /path/to/your/main.py
 ```
 
 ## 致谢
