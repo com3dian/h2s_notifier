@@ -1,6 +1,13 @@
 # Holland2Stay 房源监控通知系统
 
+> [!NOTE]
+> 本仓库是 [751K/holland2stay_h2s_check](https://github.com/751K/holland2stay_h2s_check) 的一个分支。
+
 本项目基于 [JafarAkhondali/Holland2StayNotifier](https://github.com/JafarAkhondali/Holland2StayNotifier) 进行二次开发，将原有的Telegram通知改为使用PushPlus推送通知，并增加了多项实用功能。
+
+## 致谢
+- 原项目作者: [JafarAkhondali](https://github.com/JafarAkhondali)
+- 原项目贡献者: [MHMALEK](https://github.com/MHMALEK)
 
 ## 新增功能
 - **PushPlus通知**: 使用PushPlus将新房源信息推送到微信等渠道
@@ -94,83 +101,79 @@ python clear_db.py
 */30 0-8,17-23 * * 1-5 python /path/to/your/main.py
 ```
 
-## 致谢
-- 原项目作者: [JafarAkhondali](https://github.com/JafarAkhondali)
-- 原项目贡献者: [MHMALEK](https://github.com/MHMALEK)
+## 部署到 Azure
 
-## Deployment to Azure
+本节介绍如何将应用程序作为 Docker 容器部署到 Azure App Service。
 
-This section describes how to deploy the application to Azure App Service as a Docker container.
+### 先决条件
 
-### Prerequisites
+*   一个拥有有效订阅的 Azure 帐户。
+*   已安装 [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)。
+*   已安装 [Docker](https://docs.docker.com/get-docker/)。
 
-*   An Azure account with an active subscription.
-*   [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) installed.
-*   [Docker](https://docs.docker.com/get-docker/) installed.
+### 1. 构建并推送 Docker 镜像
 
-### 1. Build and Push the Docker Image
-
-1.  **Log in to Azure:**
+1.  **登录到 Azure:**
 
     ```bash
     az login
     ```
 
-2.  **Create a resource group:**
+2.  **创建资源组:**
 
     ```bash
     az group create --name <resource-group-name> --location <location>
     ```
 
-3.  **Create an Azure Container Registry (ACR):**
+3.  **创建 Azure 容器注册表 (ACR):**
 
     ```bash
     az acr create --resource-group <resource-group-name> --name <acr-name> --sku Basic --admin-enabled true
     ```
 
-4.  **Log in to your ACR:**
+4.  **登录到您的 ACR:**
 
     ```bash
     az acr login --name <acr-name>
     ```
 
-5.  **Build the Docker image:**
+5.  **构建 Docker 镜像:**
 
     ```bash
     docker build -t <acr-name>.azurecr.io/h2snotifier:latest h2snotifier/
     ```
 
-6.  **Push the image to your ACR:**
+6.  **将镜像推送到您的 ACR:**
 
     ```bash
     docker push <acr-name>.azurecr.io/h2snotifier:latest
     ```
 
-### 2. Deploy to Azure App Service
+### 2. 部署到 Azure App Service
 
-1.  **Create an App Service plan:**
+1.  **创建 App Service 计划:**
 
     ```bash
     az appservice plan create --name <app-service-plan-name> --resource-group <resource-group-name> --is-linux
     ```
 
-2.  **Create a web app:**
+2.  **创建 Web 应用:**
 
     ```bash
     az webapp create --resource-group <resource-group-name> --plan <app-service-plan-name> --name <web-app-name> --deployment-container-image-name <acr-name>.azurecr.io/h2snotifier:latest
     ```
 
-3.  **Configure the web app to use the container registry:**
+3.  **配置 Web 应用以使用容器注册表:**
 
     ```bash
     az webapp config container set --name <web-app-name> --resource-group <resource-group-name> --docker-custom-image-name <acr-name>.azurecr.io/h2snotifier:latest --docker-registry-server-url https://<acr-name>.azurecr.io --docker-registry-server-user <acr-username> --docker-registry-server-password <acr-password>
     ```
 
-    You can get the ACR username and password from the Azure portal under your ACR's "Access keys" section.
+    您可以从 Azure 门户中您的 ACR 的“访问密钥”部分获取 ACR 用户名和密码。
 
-4.  **Enable continuous deployment (optional):**
+4.  **启用持续部署（可选）:**
 
-    This will automatically redeploy the application when a new image is pushed to the container registry.
+    当新镜像被推送到容器注册表时，这将自动重新部署应用程序。
 
     ```bash
     az webapp deployment container config --enable-cd true --name <web-app-name> --resource-group <resource-group-name>
