@@ -18,3 +18,5 @@ sqlparse==0.4.4
 tomli==2.0.1
 typing_extensions==4.9.0
 urllib3==2.2.1
+cloudscraper==1.2.71
+pytz==2025.2

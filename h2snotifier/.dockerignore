@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.pytest_cache
+.vscode/
+.git
+.gitignore
+docker-compose.yml
+Dockerfile
+houses.db
+house_sync.log

@@ -8,6 +8,7 @@ import time
 from datetime import datetime, timezone
 import pytz
 import random # 导入 random 模块
+from web_server import start_web_server
 
 # 配置日志记录，同时输出到控制台和文件
 logging.basicConfig(
@@ -22,11 +23,18 @@ logging.basicConfig(
 # SERVERCHAN_SCKEY = None
 
 
+import os
+
 def read_config(config_path="config.json"):
     try:
         logging.info(f"正在读取配置文件: {config_path}")
         with open(config_path) as f:
             config = json.load(f)
+            # 优先从环境变量读取 PUSHPLUS_TOKEN
+            pushplus_token_env = os.environ.get("PUSHPLUS_TOKEN")
+            if pushplus_token_env:
+                config["PUSHPLUS_TOKEN"] = pushplus_token_env
+                logging.info("已从环境变量加载 PUSHPLUS_TOKEN")
             logging.info(f"成功读取配置文件，包含 {len(config['notifications']['groups'])} 个监控组")
             return config
     except FileNotFoundError:
@@ -44,7 +52,19 @@ def process_notifications(config, pushplus_token_to_use):
     logging.info("开始处理房源通知...")
     only_direct_booking = config.get("only_direct_booking", True)
     logging.info(f"配置设置：只抓取可直接预订的房源: {only_direct_booking}")
-    max_price = config.get("max_price", 1000)
+    
+    # 优先从环境变量读取 MAX_PRICE，然后从 config 文件读取，最后使用默认值
+    max_price_str = os.environ.get("MAX_PRICE")
+    if max_price_str:
+        try:
+            max_price = int(max_price_str)
+            logging.info(f"已从环境变量加载 MAX_PRICE: {max_price} 欧元")
+        except (ValueError, TypeError):
+            max_price = config.get("max_price", 1000)
+            logging.warning(f"环境变量 MAX_PRICE ('{max_price_str}') 不是有效整数, 将使用配置文件或默认值: {max_price} 欧元")
+    else:
+        max_price = config.get("max_price", 1000)
+    
     logging.info(f"配置设置：房源价格上限: {max_price} 欧元")
 
     total_new_houses_cycle = 0
@@ -56,7 +76,8 @@ def process_notifications(config, pushplus_token_to_use):
         if not cities:
             logging.warning(f"监控组 {gp.get('name', '未命名组')} 未配置城市，跳过")
             continue
-        logging.info(f"开始爬取城市: {', '.join([f'{city}({CITY_IDS.get(city, '未知')})' for city in cities])}")
+        city_str = ', '.join([f"{city}({CITY_IDS.get(city, '未知')})" for city in cities])
+        logging.info(f"开始爬取城市: {city_str}")
 
         houses_in_cities = scrape(cities=cities, only_direct_booking=only_direct_booking)
         if not houses_in_cities:
@@ -95,8 +116,11 @@ def process_notifications(config, pushplus_token_to_use):
     logging.info(f"本轮处理完成：新增房源 {total_new_houses_cycle} 个，因价格过滤 {filtered_by_price_cycle} 个。")
 
 
+from web_server import start_web_server
+
 def main():
     try:
+        start_web_server()
         logging.info("程序开始执行")
         create_table()
 

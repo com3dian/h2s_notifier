@@ -97,3 +97,81 @@ python clear_db.py
 ## 致谢
 - 原项目作者: [JafarAkhondali](https://github.com/JafarAkhondali)
 - 原项目贡献者: [MHMALEK](https://github.com/MHMALEK)
+
+## Deployment to Azure
+
+This section describes how to deploy the application to Azure App Service as a Docker container.
+
+### Prerequisites
+
+*   An Azure account with an active subscription.
+*   [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) installed.
+*   [Docker](https://docs.docker.com/get-docker/) installed.
+
+### 1. Build and Push the Docker Image
+
+1.  **Log in to Azure:**
+
+    ```bash
+    az login
+    ```
+
+2.  **Create a resource group:**
+
+    ```bash
+    az group create --name <resource-group-name> --location <location>
+    ```
+
+3.  **Create an Azure Container Registry (ACR):**
+
+    ```bash
+    az acr create --resource-group <resource-group-name> --name <acr-name> --sku Basic --admin-enabled true
+    ```
+
+4.  **Log in to your ACR:**
+
+    ```bash
+    az acr login --name <acr-name>
+    ```
+
+5.  **Build the Docker image:**
+
+    ```bash
+    docker build -t <acr-name>.azurecr.io/h2snotifier:latest h2snotifier/
+    ```
+
+6.  **Push the image to your ACR:**
+
+    ```bash
+    docker push <acr-name>.azurecr.io/h2snotifier:latest
+    ```
+
+### 2. Deploy to Azure App Service
+
+1.  **Create an App Service plan:**
+
+    ```bash
+    az appservice plan create --name <app-service-plan-name> --resource-group <resource-group-name> --is-linux
+    ```
+
+2.  **Create a web app:**
+
+    ```bash
+    az webapp create --resource-group <resource-group-name> --plan <app-service-plan-name> --name <web-app-name> --deployment-container-image-name <acr-name>.azurecr.io/h2snotifier:latest
+    ```
+
+3.  **Configure the web app to use the container registry:**
+
+    ```bash
+    az webapp config container set --name <web-app-name> --resource-group <resource-group-name> --docker-custom-image-name <acr-name>.azurecr.io/h2snotifier:latest --docker-registry-server-url https://<acr-name>.azurecr.io --docker-registry-server-user <acr-username> --docker-registry-server-password <acr-password>
+    ```
+
+    You can get the ACR username and password from the Azure portal under your ACR's "Access keys" section.
+
+4.  **Enable continuous deployment (optional):**
+
+    This will automatically redeploy the application when a new image is pushed to the container registry.
+
+    ```bash
+    az webapp deployment container config --enable-cd true --name <web-app-name> --resource-group <resource-group-name>
+    ```
